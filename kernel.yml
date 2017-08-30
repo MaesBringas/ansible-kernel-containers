@@ -1,0 +1,5 @@
+---
+  - name: Kernel compilation and installation for Centos 7
+    hosts: centos
+    roles:
+      - { role: kernel }

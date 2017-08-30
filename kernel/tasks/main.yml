@@ -1,0 +1,60 @@
+---
+- name: Prepare system - Update
+  command: yum update
+
+- name: Prepare system - Install dependencies
+  become: yes
+  command: yum install -y ncurses-devel make gcc openssl-devel grub2
+
+- name: Prepare system - Clear files in /boot
+  become: yes
+  command: rm -rf /boot/*
+
+- name: Check internet
+  get_url:
+    url:         https://www.archlinux.org/
+    dest:        "{{ temp_dir }}"
+  register:      connection
+
+- name: Get kernel code
+  get_url:
+      url: wget https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-4.7.tar.xz
+      dest: "{{ temp_dir }}"
+      mode: 0440
+    retries: 2
+    ignore_errors: True
+    delay: 30
+
+- name: Decompress kernel code
+  command: tar -xvf linux-4.7.tar.xz
+  when: connection|succeeded
+
+- name: Compile kernel 1
+  command: make bzImage
+  args:
+    chdir: linux-4.7
+
+- name: Compile kernel 2
+  command: make modules
+  args:
+    chdir: linux-4.7
+
+- name: Compile kernel 3
+  command: make
+  args:
+    chdir: linux-4.7
+
+- name: Compile kernel 4
+  command: make install
+  args:
+    chdir: linux-4.7
+
+- name: Compile kernel 5
+  command: make modules_install
+  args:
+    chdir: linux-4.7
+
+# TODO: 
+#mv /boot/vmlinuz /boot/vmlinuz-4.7-custom
+#mkinitrd /boot/initrd-4.7-custom.img /boot/vmlinuz-4.7-custom
+#Edit /etc/default/grub and add or change the
