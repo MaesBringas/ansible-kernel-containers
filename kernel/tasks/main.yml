@@ -4,13 +4,16 @@
 
 - name: Prepare system - Install dependencies
   become: yes
-  command: yum install -y ncurses-devel make gcc openssl-devel grub2
+  command: "yum install -y {{ item }}"
+  with_items:
+    - "{{ packages_rhel }}"
+  when: ansible_os_family == 'RedHat'
 
 - name: Prepare system - Clear files in /boot
   become: yes
   command: rm -rf /boot/*
 
-- name: Check internet
+- name: Prepare system - Check internet
   get_url:
     url:         https://www.archlinux.org/
     dest:        "{{ temp_dir }}"
@@ -18,12 +21,13 @@
 
 - name: Get kernel code
   get_url:
-      url: wget https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-4.7.tar.xz
+      url: https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-{{ kernel_version }}.tar.xz
       dest: "{{ temp_dir }}"
       mode: 0440
     retries: 2
     ignore_errors: True
     delay: 30
+  when: connection|succeeded
 
 - name: Decompress kernel code
   command: tar -xvf linux-4.7.tar.xz
@@ -54,7 +58,7 @@
   args:
     chdir: linux-4.7
 
-# TODO: 
+# TODO:
 #mv /boot/vmlinuz /boot/vmlinuz-4.7-custom
 #mkinitrd /boot/initrd-4.7-custom.img /boot/vmlinuz-4.7-custom
 #Edit /etc/default/grub and add or change the

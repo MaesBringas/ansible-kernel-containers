@@ -1,2 +1,4 @@
 ---
-# defaults file for kernel
+packages_rhel: ['ncurses-devel', 'elfutils-libelf-devel', 'bc',
+'binutils-devel', 'openssl-devel', 'zlib-devel', 'hmaccalc', 'grub2',
+'make', 'gcc']
