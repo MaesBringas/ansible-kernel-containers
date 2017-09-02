@@ -1,62 +1,99 @@
 ---
-- name: Prepare system - Update
-  command: yum update
+- name:            Prepare system - Update
+  command:         yum update
 
-- name: Prepare system - Install dependencies
-  become: yes
-  command: "yum install -y {{ item }}"
+# - name:          Prepare system - Install dependencies
+#   become:        yes
+#   command:       "yum install -y {{ item }}"
+#   with_items:
+#     - "{{ packages_rhel }}"
+#   when:          ansible_os_family == 'RedHat'
+
+- set_fact:
+    packages:      "{{ packages_rhel }}"
+  when:            ansible_os_family == 'RedHat'
+
+- set_fact:
+    packages:      "{{ packages_deb }}"
+  when:            ansible_os_family == 'Debian' or ansible_os_family == 'Ubuntu'
+
+- name:            Prepare system - Install dependencies
+  become:          yes
+  package:
+    name:          "{{ item }}"
+    state:         present
   with_items:
-    - "{{ packages_rhel }}"
-  when: ansible_os_family == 'RedHat'
+    - "{{ packages }}"
 
-- name: Prepare system - Clear files in /boot
-  become: yes
-  command: rm -rf /boot/*
+- name:            Prepare system - Clear files in /boot
+  become:          yes
+  command:         rm -rf /boot/*
 
-- name: Prepare system - Check internet
+- name:            Prepare system - Check internet
   get_url:
-    url:         https://www.archlinux.org/
-    dest:        "{{ temp_dir }}"
-  register:      connection
+    url:           https://www.archlinux.org/
+    dest:          "{{ temp_dir }}"
+  register:        connection
 
-- name: Get kernel code
+- name:            Prepare source code - Get kernel code
   get_url:
-      url: https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-{{ kernel_version }}.tar.xz
-      dest: "{{ temp_dir }}"
-      mode: 0440
-    retries: 2
+      url:         https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-{{ kernel_version }}.tar.xz
+      dest:        "{{ temp_dir }}"
+      mode:        0440
+    retries:       2
     ignore_errors: True
-    delay: 30
-  when: connection|succeeded
+    delay:         30
+  when:            connection|succeeded
 
-- name: Decompress kernel code
-  command: tar -xvf linux-4.7.tar.xz
-  when: connection|succeeded
+- name:            Prepare source code - Decompress kernel code
+  unarchive:
+    src:           "{{ temp_dir }}/linux-{{ kernel_version }}.tar.xz"
+    dest:          "{{ temp_dir }}"
+    remote_src:    True
+    creates:       no
 
-- name: Compile kernel 1
-  command: make bzImage
-  args:
-    chdir: linux-4.7
+- name:            Prepare source code - Copy templates kernel config
+  template:
+    src:           "{{ item.src }}"
+    dest:          "{{ item.dest }}"
+    mode:          0644
+  with_items:
+    - {"src": "kernel.config.j2", "dest": "{{ temp_dir }}/linux-{{ kernel_version }}/.config"}
 
-- name: Compile kernel 2
-  command: make modules
-  args:
-    chdir: linux-4.7
+- name:            Prepare source code - Make config
+  make:
+    target:        silentoldconfig
+    chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
 
-- name: Compile kernel 3
-  command: make
-  args:
-    chdir: linux-4.7
+- name:            Compile kernel - Create rpm
+  make:
+    target:        rpm
+    chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
 
-- name: Compile kernel 4
-  command: make install
-  args:
-    chdir: linux-4.7
-
-- name: Compile kernel 5
-  command: make modules_install
-  args:
-    chdir: linux-4.7
+#- name:           Compile kernel 1
+#  command:        make bzImage
+#  args:
+#    chdir:        "linux-{{ kernel_version }}"
+#
+#- name:           Compile kernel 2
+#  command:        make modules
+#  args:
+#    chdir:        "linux-{{ kernel_version }}"
+#
+#- name:           Compile kernel 3
+#  command:        make
+#  args:
+#    chdir:        "linux-{{ kernel_version }}"
+#
+#- name:           Compile kernel 4
+#  command:        make install
+#  args:
+#    chdir:        "linux-{{ kernel_version }}"
+#
+#- name:           Compile kernel 5
+#  command:        make modules_install
+#  args:
+#    chdir:        "linux-{{ kernel_version }}"
 
 # TODO:
 #mv /boot/vmlinuz /boot/vmlinuz-4.7-custom
