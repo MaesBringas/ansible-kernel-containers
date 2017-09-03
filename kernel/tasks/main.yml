@@ -1,6 +1,12 @@
 ---
+#- name:           Prepare system - Update
+#  command:        yum update
+
 - name:            Prepare system - Update
-  command:         yum update
+  become:          yes
+  package:
+    name:          *
+    state:         latest
 
 # - name:          Prepare system - Install dependencies
 #   become:        yes
@@ -35,14 +41,17 @@
     dest:          "{{ temp_dir }}"
   register:        connection
 
-- name:            Prepare source code - Get kernel code
+- name:            Prepare source code - Get {{ item }}
   get_url:
-      url:         https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-{{ kernel_version }}.tar.xz
+      url:         "{{ item }}"
       dest:        "{{ temp_dir }}"
       mode:        0440
     retries:       2
     ignore_errors: True
     delay:         30
+  with_item:
+    - "https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-{{ kernel_version }}.tar.xz"
+    - "https://grsecurity.net/~paxguy1/pax-linux-{{ kernel_version }}.24-test7.patch"
   when:            connection|succeeded
 
 - name:            Prepare source code - Decompress kernel code
@@ -60,15 +69,30 @@
   with_items:
     - {"src": "kernel.config.j2", "dest": "{{ temp_dir }}/linux-{{ kernel_version }}/.config"}
 
+- name:            Prepare source code - Patch with GrSecurity set
+  command:         "patch -p1 < ../pax-linux-{{ kernel_version }}.24-test7.patch"
+  chdir:           "{{ temp_dir }}/linux-{{ kernel_version }}"
+
 - name:            Prepare source code - Make config
   make:
     target:        silentoldconfig
     chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
 
-- name:            Compile kernel - Create rpm
+- set_fact:
+    type_binary:   rpm
+  when:            ansible_os_family == 'RedHat'
+
+- set_fact:
+    type_binary:   deb
+  when:            ansible_os_family == 'Debian' or ansible_os_family == 'Ubuntu'
+
+- name:            Compile kernel - Create binary
   make:
-    target:        rpm
+    target:        "{{ type_binary }}"
     chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
+  when:            ansible_os_family == 'RedHat'
+
+
 
 #- name:           Compile kernel 1
 #  command:        make bzImage
