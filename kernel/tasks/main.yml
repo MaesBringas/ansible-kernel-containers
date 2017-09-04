@@ -2,11 +2,11 @@
 #- name:           Prepare system - Update
 #  command:        yum update
 
-- name:            Prepare system - Update
-  become:          yes
-  package:
-    name:          *
-    state:         latest
+#- name:            Prepare system - Update
+#  become:          yes
+#  package:
+#    name:          *
+#    state:         latest
 
 # - name:          Prepare system - Install dependencies
 #   become:        yes
@@ -43,13 +43,11 @@
 
 - name:            Prepare source code - Get {{ item }}
   get_url:
-      url:         "{{ item }}"
-      dest:        "{{ temp_dir }}"
-      mode:        0440
-    retries:       2
-    ignore_errors: True
-    delay:         30
-  with_item:
+    url:         "{{ item }}"
+    dest:        "{{ temp_dir }}"
+    mode:        0440
+  ignore_errors: True
+  with_items:
     - "https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-{{ kernel_version }}.tar.xz"
     - "https://grsecurity.net/~paxguy1/pax-linux-{{ kernel_version }}.24-test7.patch"
   when:            connection|succeeded
@@ -70,8 +68,10 @@
     - {"src": "kernel.config.j2", "dest": "{{ temp_dir }}/linux-{{ kernel_version }}/.config"}
 
 - name:            Prepare source code - Patch with GrSecurity set
+  become: yes
   command:         "patch -p1 < ../pax-linux-{{ kernel_version }}.24-test7.patch"
-  chdir:           "{{ temp_dir }}/linux-{{ kernel_version }}"
+  args:
+    chdir:           "{{ temp_dir }}/linux-{{ kernel_version }}"
 
 - name:            Prepare source code - Make config
   make:

@@ -5,3 +5,5 @@ packages_rhel: ['ncurses-devel', 'elfutils-libelf-devel', 'bc',
 
 packages_deb: ['gcc', 'libc6-dev', 'binutils-dev', 'make', 'bin86',
 'module-init-tools', 'libncurses5-dev' ]
+
+temp_dir: /tmp
