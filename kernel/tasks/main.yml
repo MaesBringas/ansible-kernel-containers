@@ -67,11 +67,10 @@
   with_items:
     - {"src": "kernel.config.j2", "dest": "{{ temp_dir }}/linux-{{ kernel_version }}/.config"}
 
-- name:            Prepare source code - Patch with GrSecurity set
-  become: yes
-  command:         "patch -p1 < ../pax-linux-{{ kernel_version }}.24-test7.patch"
-  args:
-    chdir:           "{{ temp_dir }}/linux-{{ kernel_version }}"
+- name: Prepare source code - Patch with GrSecurity set
+  patch:
+    src: "{{ temp_dir }}/pax-linux-{{ kernel_version }}.24-test7.patch"
+    dest: "{{ temp_dir }}/linux-{{ kernel_version }}"
 
 - name:            Prepare source code - Make config
   make:
