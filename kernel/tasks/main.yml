@@ -100,7 +100,7 @@
   when:            ansible_os_family == 'RedHat'
 
 
-  #TODO: CHECK FS USED
+
 #for deb
 #fakeroot make-kpkg --initrd --revision=1.0.custom kernel_image
 

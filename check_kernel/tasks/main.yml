@@ -21,10 +21,13 @@
     - CONFIG_CGROUP_DEVICE
     - CONFIG_CGROUP_CPUACCT
     - CONFIG_CGROUP_PERF
+  tags: docker
 
 - debug: msg="Option not set > {{ item }}"
   when: "{{ item.results.stderr }}" == ""
   with_items: "{{ cgroups_options.results }}"
+  tags: docker
+
 
 
 - name: Check variables in /boot/config-`uname -r` applied to namespaces
@@ -39,10 +42,14 @@
     - CONFIG_USER_NS
     - CONFIG_PID_NS
     - CONFIG_NET_NS
+  tags: docker
+
 
 - debug: msg="Option not set > {{ item }}"
   when: "{{ item.results.stderr }}" == ""
   with_items: "{{ namespaces_options.results }}"
+  tags: docker
+
 
 - name: Check variables in /boot/config-`uname -r` applied to seccomps
   command: "grep {{ item }} /boot/`uname -r`"
@@ -54,11 +61,50 @@
     - CONFIG_SECCOMP_FILTER
     - CONFIG_HAVE_ARCH_SECCOMP_FILTER
     - CONFIG_PROC_FS
+  tags: docker
+
 
 - debug: msg="Option not set > {{ item }}"
   when: "{{ item.results.stderr }}" == ""
   with_items: "{{ seccomps_options.results }}"
+  tags: docker
+
+- name: Check variables in /boot/config-`uname -r` applied to Xen hypervisor
+  command: "grep {{ item }} /boot/`uname -r`"
+  register: xen_options
+  ignore_errors: True
+  check_mode: True
+  with_items:
+    - CONFIG_XEN
+    - CONFIG_XEN_DOM0
+    - CONFIG_XEN_PVHVM
+    - CONFIG_XEN_512GB
+    - CONFIG_XEN_SAVE_RESTORE
+    - CONFIG_XEN_PVH
+  tags: xen
+
+- debug: msg="Option not set > {{ item }}"
+  when: "{{ item.results.stderr }}" == ""
+  with_items: "{{ xen_options.results }}"
+  tags: xen
 
   #TODO: CHECK FS USED
 
   #TODO: check if selinux/apparmor is installed
+
+- name: Check if SELinux is installed
+  become: yes
+  yum:
+    name: selinux
+    state: present
+  ignore_errors: True
+
+- name: Check if SELinux is installed
+  become: yes
+  selinux:
+    state: enforcing
+  register: selinux_stat
+  ignore_errors: True
+
+- debug: msg="SELinux not installed"
+  when: "{{ selinux_stat }}" | failed
