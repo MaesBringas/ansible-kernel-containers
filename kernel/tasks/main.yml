@@ -15,6 +15,11 @@
 #     - "{{ packages_rhel }}"
 #   when:          ansible_os_family == 'RedHat'
 
+## Check free disk space to compile a kernel
+- assert:
+    that:
+      - ansible_memtotal_mb >= 15360
+
 - set_fact:
     packages:      "{{ packages_rhel }}"
   when:            ansible_os_family == 'RedHat'
@@ -73,6 +78,7 @@
     basedir: "{{ temp_dir }}/linux-{{ kernel_version }}"
     remote_src: yes
   ignore_errors: yes
+  when: "{{ kernel_version }}" <= 4.9
 
 - name:            Prepare source code - Make config
   make:
@@ -92,6 +98,9 @@
     target:        "{{ type_binary }}"
     chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
   when:            ansible_os_family == 'RedHat'
+
+
+  #TODO: CHECK FS USED
 #for deb
 #fakeroot make-kpkg --initrd --revision=1.0.custom kernel_image
 
