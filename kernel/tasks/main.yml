@@ -30,7 +30,7 @@
     state:         present
   with_items:
     - "{{ packages }}"
-
+# Check memory available to compile kernel
 - name:            Prepare system - Clear files in /boot
   become:          yes
   command:         rm -rf /boot/*
@@ -70,11 +70,13 @@
 - name: Prepare source code - Patch with GrSecurity set
   patch:
     src: "{{ temp_dir }}/pax-linux-{{ kernel_version }}.24-test7.patch"
-    dest: "{{ temp_dir }}/linux-{{ kernel_version }}"
+    basedir: "{{ temp_dir }}/linux-{{ kernel_version }}"
+    remote_src: yes
+  ignore_errors: yes
 
 - name:            Prepare source code - Make config
   make:
-    target:        silentoldconfig
+    target:        .config
     chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
 
 - set_fact:
@@ -90,8 +92,8 @@
     target:        "{{ type_binary }}"
     chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
   when:            ansible_os_family == 'RedHat'
-
-
+#for deb
+#fakeroot make-kpkg --initrd --revision=1.0.custom kernel_image
 
 #- name:           Compile kernel 1
 #  command:        make bzImage

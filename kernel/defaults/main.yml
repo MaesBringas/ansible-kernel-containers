@@ -1,9 +1,9 @@
 ---
 packages_rhel: ['ncurses-devel', 'elfutils-libelf-devel', 'bc',
 'binutils-devel', 'openssl-devel', 'zlib-devel', 'hmaccalc', 'grub2',
-'make', 'gcc']
+'make', 'gcc', 'patch', 'rpm-build']
 
 packages_deb: ['gcc', 'libc6-dev', 'binutils-dev', 'make', 'bin86',
-'module-init-tools', 'libncurses5-dev' ]
+'module-init-tools', 'libncurses5-dev', 'fakeroot', 'kernel-package' ]
 
 temp_dir: /tmp
