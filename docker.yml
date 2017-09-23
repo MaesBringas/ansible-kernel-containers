@@ -1,0 +1,7 @@
+---
+
+- name: Docker capabilities testing and
+  connection: local
+  hosts: localhost
+  roles:
+    - { role: docker-pentesting }

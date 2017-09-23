@@ -3,7 +3,10 @@ packages_rhel: ['ncurses-devel', 'elfutils-libelf-devel', 'bc',
 'binutils-devel', 'openssl-devel', 'zlib-devel', 'hmaccalc', 'grub2',
 'make', 'gcc', 'patch', 'rpm-build']
 
-packages_deb: ['gcc', 'libc6-dev', 'binutils-dev', 'make', 'bin86',
+packages_ubuntu: ['gcc', 'libc6-dev', 'binutils-dev', 'make', 'bin86',
 'module-init-tools', 'libncurses5-dev', 'fakeroot', 'kernel-package' ]
 
-temp_dir: /tmp
+packages_deb: ['gcc', 'libc6-dev', 'binutils-dev', 'make', 'bin86',
+'kmod', 'libncurses5-dev', 'fakeroot', 'kernel-package' ]
+
+temp_dir: /media/alice/42f1a362-ad98-437a-b840-1201e0f83f6f/tfmtest

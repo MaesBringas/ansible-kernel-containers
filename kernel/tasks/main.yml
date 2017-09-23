@@ -1,6 +1,6 @@
 ---
-#- name:           Prepare system - Update
-#  command:        yum update
+#- name:            Prepare system - Update
+#  command:         yum update
 
 #- name:            Prepare system - Update
 #  become:          yes
@@ -8,12 +8,12 @@
 #    name:          *
 #    state:         latest
 
-# - name:          Prepare system - Install dependencies
-#   become:        yes
-#   command:       "yum install -y {{ item }}"
+# - name:           Prepare system - Install dependencies
+#   become:         yes
+#   command:        "yum install -y {{ item }}"
 #   with_items:
 #     - "{{ packages_rhel }}"
-#   when:          ansible_os_family == 'RedHat'
+#   when:           ansible_os_family == 'RedHat'
 
 ## Check free disk space to compile a kernel
 - assert:
@@ -21,113 +21,127 @@
       - ansible_memtotal_mb >= 15360
 
 - set_fact:
-    packages:      "{{ packages_rhel }}"
-  when:            ansible_os_family == 'RedHat'
+    packages:       "{{ packages_rhel }}"
+  when:             ansible_os_family == 'RedHat'
 
 - set_fact:
-    packages:      "{{ packages_deb }}"
-  when:            ansible_os_family == 'Debian' or ansible_os_family == 'Ubuntu'
+    packages:       "{{ packages_ubuntu }}"
+  when:             ansible_os_family == 'Ubuntu'
 
-- name:            Prepare system - Install dependencies
-  become:          yes
+- set_fact:
+    packages:       "{{ packages_deb }}"
+  when:             ansible_distribution == 'Debian'
+
+- name:             Prepare system - Install dependencies
+  become:           yes
   package:
-    name:          "{{ item }}"
-    state:         present
+    name:           "{{ item }}"
+    state:          present
   with_items:
     - "{{ packages }}"
-# Check memory available to compile kernel
-- name:            Prepare system - Clear files in /boot
-  become:          yes
-  command:         rm -rf /boot/*
 
-- name:            Prepare system - Check internet
-  get_url:
-    url:           https://www.archlinux.org/
-    dest:          "{{ temp_dir }}"
-  register:        connection
+    - name:         Prepare system - Clear files in /boot
+  become:           yes
+  command:          rm -rf /boot/*
 
-- name:            Prepare source code - Get {{ item }}
+- name:             Prepare system - Check internet
   get_url:
-    url:         "{{ item }}"
-    dest:        "{{ temp_dir }}"
-    mode:        0440
-  ignore_errors: True
+    url:            http://www.archlinux.org/
+    validate_certs: false
+    dest:           "{{ temp_dir }}"
+  register:         connection
+
+- name:             Prepare source code - Get {{ item }}
+  get_url:
+    url:            "{{ item }}"
+    dest:           "{{ temp_dir }}"
+    validate_certs: false
+    mode:           0440
+  ignore_errors:    True
   with_items:
     - "https://cdn.kernel.org/pub/linux/kernel/v4.x/linux-{{ kernel_version }}.tar.xz"
     - "https://grsecurity.net/~paxguy1/pax-linux-{{ kernel_version }}.24-test7.patch"
-  when:            connection|succeeded
+  when:             connection|succeeded
 
-- name:            Prepare source code - Decompress kernel code
+- name:             Prepare source code - Decompress kernel code
   unarchive:
-    src:           "{{ temp_dir }}/linux-{{ kernel_version }}.tar.xz"
-    dest:          "{{ temp_dir }}"
-    remote_src:    True
-    creates:       no
+    src:            "{{ temp_dir }}/linux-{{ kernel_version }}.tar.xz"
+    dest:           "{{ temp_dir }}"
+    remote_src:     True
+    creates:        no
 
-- name:            Prepare source code - Copy templates kernel config
+- name:             Prepare source code - Copy templates kernel config
   template:
-    src:           "{{ item.src }}"
-    dest:          "{{ item.dest }}"
-    mode:          0644
+    src:            "{{ item.src }}"
+    dest:           "{{ item.dest }}"
+    mode:           0644
   with_items:
     - {"src": "kernel.config.j2", "dest": "{{ temp_dir }}/linux-{{ kernel_version }}/.config"}
 
-- name: Prepare source code - Patch with GrSecurity set
+- name:             Prepare source code - Patch with GrSecurity set
   patch:
-    src: "{{ temp_dir }}/pax-linux-{{ kernel_version }}.24-test7.patch"
-    basedir: "{{ temp_dir }}/linux-{{ kernel_version }}"
-    remote_src: yes
-  ignore_errors: yes
-  when: "{{ kernel_version }}" <= 4.9
+    src:            "{{ temp_dir }}/pax-linux-{{ kernel_version }}.24-test7.patch"
+    basedir:        "{{ temp_dir }}/linux-{{ kernel_version }}"
+    remote_src:     yes
+  when:             kernel_version <= 4.9
 
-- name:            Prepare source code - Make config
-  make:
-    target:        .config
-    chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
+- name:             Compile kernel - Create binary
+  become:           yes
+  command:          make-kpkg --initrd kernel_image kernel_headers
+  args:
+    chdir:          "{{ temp_dir }}/linux-{{ kernel_version }}"
+  when:             ansible_distribution == 'Debian'
 
-- set_fact:
-    type_binary:   rpm
-  when:            ansible_os_family == 'RedHat'
 
-- set_fact:
-    type_binary:   deb
-  when:            ansible_os_family == 'Debian' or ansible_os_family == 'Ubuntu'
 
-- name:            Compile kernel - Create binary
-  make:
-    target:        "{{ type_binary }}"
-    chdir:         "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
-  when:            ansible_os_family == 'RedHat'
+# - name:           Prepare source code - Make config
+#   make:
+#     target:       .config
+#     chdir:        "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
+#
+# - set_fact:
+#     type_binary:  rpm
+#   when:           ansible_os_family == 'RedHat'
+#
+# - set_fact:
+#     type_binary:  deb
+#   when:           ansible_os_family == 'Debian' or ansible_os_family == 'Ubuntu'
+#
+# - name:           Compile kernel - Create binary
+#   make:
+#     target:       "{{ type_binary }}"
+#     chdir:        "{{ temp_dir }}/linux-{{ kernel_version }}/.config"
+#   when:           ansible_os_family == 'RedHat'
 
 
 
 #for deb
 #fakeroot make-kpkg --initrd --revision=1.0.custom kernel_image
 
-#- name:           Compile kernel 1
-#  command:        make bzImage
+#- name:            Compile kernel 1
+#  command:         make bzImage
 #  args:
-#    chdir:        "linux-{{ kernel_version }}"
+#    chdir:         "linux-{{ kernel_version }}"
 #
-#- name:           Compile kernel 2
-#  command:        make modules
+#- name:            Compile kernel 2
+#  command:         make modules
 #  args:
-#    chdir:        "linux-{{ kernel_version }}"
+#    chdir:         "linux-{{ kernel_version }}"
 #
-#- name:           Compile kernel 3
-#  command:        make
+#- name:            Compile kernel 3
+#  command:         make
 #  args:
-#    chdir:        "linux-{{ kernel_version }}"
+#    chdir:         "linux-{{ kernel_version }}"
 #
-#- name:           Compile kernel 4
-#  command:        make install
+#- name:            Compile kernel 4
+#  command:         make install
 #  args:
-#    chdir:        "linux-{{ kernel_version }}"
+#    chdir:         "linux-{{ kernel_version }}"
 #
-#- name:           Compile kernel 5
-#  command:        make modules_install
+#- name:            Compile kernel 5
+#  command:         make modules_install
 #  args:
-#    chdir:        "linux-{{ kernel_version }}"
+#    chdir:         "linux-{{ kernel_version }}"
 
 # TODO:
 #mv /boot/vmlinuz /boot/vmlinuz-4.7-custom

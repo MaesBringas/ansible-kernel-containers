@@ -1,6 +1,7 @@
 ---
-  
+
 - name: Kernel compilation and installation for Centos 7
-  hosts: centos
+  connection: local
+  hosts: localhost
   roles:
     - { role: kernel }
