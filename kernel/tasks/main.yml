@@ -92,6 +92,13 @@
     chdir:          "{{ temp_dir }}/linux-{{ kernel_version }}"
   when:             ansible_distribution == 'Debian'
 
+- name:             Compile kernel - Create binary
+  become:           yes
+  command:          make rpm
+  args:
+    chdir:          "{{ temp_dir }}/linux-{{ kernel_version }}"
+  when:             ansible_distribution == 'RedHat'
+
 
 
 # - name:           Prepare source code - Make config
